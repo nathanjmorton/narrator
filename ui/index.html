@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Narrator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #14120f; --surface: #1c1915; --surface-2: #25211b; --surface-3: #302a22;
+  --line: #3a3329; --text: #efe8dc; --muted: #a69c8c; --faint: #7a7062;
+  --accent: #e9a54b; --accent-ink: #1b1308; --accent-soft: rgba(233,165,75,.14);
+  --danger: #e2725b; --ok: #7fbf7a;
+  --shadow: 0 18px 50px rgba(0,0,0,.45);
+  --ui: "Inter", "Segoe UI", system-ui, sans-serif;
+  --read: "Literata", Georgia, "Times New Roman", serif;
+  --reader-size: 20px;
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg: #f6f1e8; --surface: #fffdf8; --surface-2: #f0e9dc; --surface-3: #e6dccb;
+  --line: #ddd1bd; --text: #2b241b; --muted: #6f6454; --faint: #998c79;
+  --accent: #b5631a; --accent-ink: #fff8ef; --accent-soft: rgba(181,99,26,.12);
+  --shadow: 0 18px 50px rgba(80,60,30,.18);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 15px/1.5 var(--ui); overflow: hidden;
+  -webkit-font-smoothing: antialiased; user-select: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+input, select { font: inherit; color: inherit; }
+svg { width: 20px; height: 20px; flex: none; }
+.icon-stroke { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 10px; border: 3px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+
+.app { display: grid; grid-template-rows: 1fr auto; height: 100vh; }
+.view { overflow: hidden; display: none; min-height: 0; }
+.view.active { display: flex; flex-direction: column; }
+
+/* ---------- buttons ---------- */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line); font-weight: 500; transition: .15s; white-space: nowrap; }
+.btn:hover { background: var(--surface-3); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; display: inline-grid; place-items: center;
+  color: var(--muted); transition: .15s; position: relative; }
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.icon-btn.on { color: var(--accent); }
+.icon-btn[disabled] { opacity: .35; pointer-events: none; }
+
+/* ---------- top bar ---------- */
+.topbar { display: flex; align-items: center; gap: 14px; padding: 16px 28px; border-bottom: 1px solid var(--line); flex: none; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+.brand-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; }
+.brand-mark svg { width: 18px; height: 18px; }
+.spacer { flex: 1; }
+
+/* ---------- library ---------- */
+.library-scroll { overflow-y: auto; padding: 28px 40px 60px; flex: 1; }
+.section-title { font-size: 13px; text-transform: uppercase; letter-spacing: .09em; color: var(--faint); font-weight: 600; margin: 0 0 14px; }
+.hero { display: flex; gap: 28px; align-items: center; padding: 26px; border-radius: 22px; margin-bottom: 40px;
+  background: linear-gradient(135deg, var(--surface-2), var(--surface)); border: 1px solid var(--line); cursor: pointer; transition: .2s; }
+.hero:hover { border-color: var(--accent); }
+.hero .cover { width: 120px; flex: none; }
+.hero h2 { font: 600 28px/1.2 var(--read); margin: 4px 0 6px; }
+.hero .meta { color: var(--muted); }
+.hero .chapter-now { margin-top: 14px; color: var(--text); font-size: 15px; }
+.hero .progress { margin-top: 14px; max-width: 420px; }
+.hero-play { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; flex: none; margin-left: auto; box-shadow: 0 10px 30px rgba(233,165,75,.3); transition: .2s; }
+.hero-play svg { width: 26px; height: 26px; margin-left: 3px; }
+.hero:hover .hero-play { transform: scale(1.06); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 30px 24px; }
+.card { cursor: pointer; position: relative; }
+.card .cover { transition: transform .2s, box-shadow .2s; }
+.card:hover .cover { transform: translateY(-4px); box-shadow: var(--shadow); }
+.card h3 { font-size: 14.5px; font-weight: 600; margin: 12px 0 2px; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card .author { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .progress { margin-top: 8px; }
+.card .remove { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(0,0,0,.6); color: #fff; display: grid; place-items: center; opacity: 0; transition: .15s; }
+.card .remove svg { width: 15px; height: 15px; }
+.card:hover .remove { opacity: 1; }
+.card.missing { opacity: .45; }
+
+.cover { aspect-ratio: 2/3; border-radius: 10px; overflow: hidden; background: var(--surface-2); position: relative;
+  box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cover.gen { display: flex; flex-direction: column; justify-content: space-between; padding: 14px 12px;
+  background: linear-gradient(160deg, hsl(var(--h) 45% 34%), hsl(calc(var(--h) + 40) 40% 18%)); color: #fff; }
+.cover.gen .t { font: 600 15px/1.25 var(--read); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; }
+.cover.gen .a { font-size: 11px; opacity: .8; }
+.cover .fmt { position: absolute; bottom: 8px; left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  background: rgba(0,0,0,.55); color: #fff; padding: 2px 6px; border-radius: 5px; }
+
+.progress { height: 4px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
+.progress > div { height: 100%; background: var(--accent); border-radius: 4px; }
+.progress-label { font-size: 12px; color: var(--faint); margin-top: 5px; }
+
+.empty { text-align: center; padding: 80px 20px; color: var(--muted); max-width: 520px; margin: 0 auto; }
+.empty .big { width: 84px; height: 84px; border-radius: 26px; margin: 0 auto 22px; display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent); }
+.empty .big svg { width: 38px; height: 38px; }
+.empty h2 { color: var(--text); font: 600 26px var(--read); margin: 0 0 8px; }
+
+/* ---------- book view ---------- */
+.book-layout { display: grid; grid-template-columns: 300px 1fr; flex: 1; min-height: 0; }
+.book-layout.collapsed { grid-template-columns: 0 1fr; }
+.sidebar { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow: hidden; background: var(--surface); }
+.side-head { padding: 18px 18px 10px; display: flex; gap: 14px; align-items: center; }
+.side-head .cover { width: 54px; flex: none; border-radius: 6px; }
+.side-head .cover.gen { padding: 6px; }
+.side-head .cover.gen .t { font-size: 8px; }
+.side-head .cover.gen .a { display: none; }
+.side-head h2 { font: 600 16px/1.25 var(--read); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.side-head .meta { color: var(--muted); font-size: 13px; }
+.tabs { display: flex; gap: 4px; padding: 6px 14px 10px; }
+.tab { padding: 6px 12px; border-radius: 999px; color: var(--muted); font-size: 13px; font-weight: 500; }
+.tab.active { background: var(--surface-3); color: var(--text); }
+.side-list { overflow-y: auto; flex: 1; padding: 0 8px 20px; }
+.ch-item { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 9px 10px; border-radius: 10px; color: var(--muted); }
+.ch-item:hover { background: var(--surface-2); color: var(--text); }
+.ch-item .num { width: 26px; text-align: right; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; flex: none; }
+.ch-item .name { flex: 1; font-size: 14px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ch-item.done .name { color: var(--faint); }
+.ch-item.done .num::before { content: "✓ "; color: var(--ok); }
+.ch-item.current { background: var(--accent-soft); color: var(--text); }
+.ch-item.current .num { color: var(--accent); }
+.eq { display: none; gap: 2px; align-items: flex-end; height: 14px; flex: none; }
+.ch-item.current.playing .eq { display: flex; }
+.eq i { width: 3px; background: var(--accent); border-radius: 2px; animation: eq 1s ease-in-out infinite; }
+.eq i:nth-child(2) { animation-delay: -.4s; } .eq i:nth-child(3) { animation-delay: -.7s; }
+@keyframes eq { 0%,100% { height: 4px; } 50% { height: 14px; } }
+.bm-item { display: flex; gap: 10px; padding: 10px; border-radius: 10px; cursor: pointer; align-items: flex-start; }
+.bm-item:hover { background: var(--surface-2); }
+.bm-item .bm-text { flex: 1; font-size: 13px; color: var(--muted); }
+.bm-item .bm-text b { color: var(--text); font-weight: 500; display: block; font-size: 13.5px; }
+.bm-item .icon-btn { width: 28px; height: 28px; }
+.bm-item .icon-btn svg { width: 14px; height: 14px; }
+.side-empty { color: var(--faint); font-size: 13px; padding: 16px 12px; }
+
+.reader-wrap { position: relative; min-height: 0; display: flex; flex-direction: column; }
+.reader-top { display: flex; align-items: center; gap: 6px; padding: 10px 18px; border-bottom: 1px solid var(--line); flex: none; }
+.reader-top .crumb { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 6px; }
+.reader { overflow-y: auto; flex: 1; padding: 50px 40px 120px; user-select: text; }
+.reader-inner { max-width: 700px; margin: 0 auto; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 10px; }
+.reader h1 { font: 600 34px/1.2 var(--read); margin: 0 0 34px; letter-spacing: -.01em; }
+.reader h1.para { cursor: pointer; padding: 4px 14px; margin-left: -14px; margin-right: -14px; border-radius: 10px; }
+.reader p { font: var(--reader-size)/1.75 var(--read); margin: 0 0 6px; padding: 8px 14px; border-radius: 10px;
+  cursor: pointer; transition: background .25s, color .25s; color: var(--text); margin-left: -14px; margin-right: -14px; }
+.reader p:hover { background: var(--surface-2); }
+.reader .para.current { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.reader.dim .para:not(.current) { color: var(--muted); }
+.reader .para.bookmarked::after { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-left: 8px; vertical-align: middle; }
+.chapter-end { display: flex; justify-content: space-between; gap: 12px; margin-top: 50px; padding-top: 26px; border-top: 1px solid var(--line); }
+.follow-pill { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: none; }
+.follow-pill.show { display: inline-flex; box-shadow: var(--shadow); }
+
+/* ---------- player ---------- */
+.player { display: none; grid-template-columns: minmax(200px, 1fr) auto minmax(200px, 1fr); align-items: center; gap: 24px;
+  padding: 12px 24px 14px; background: var(--surface); border-top: 1px solid var(--line); }
+.player.show { display: grid; }
+.now { display: flex; gap: 12px; align-items: center; min-width: 0; cursor: pointer; }
+.now .cover { width: 44px; border-radius: 5px; flex: none; }
+.now .cover.gen { padding: 4px; } .now .cover.gen .t { font-size: 7px; } .now .cover.gen .a { display: none; }
+.now-text { min-width: 0; }
+.now-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now-sub { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.center { display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(560px, 46vw); }
+.controls { display: flex; align-items: center; gap: 10px; }
+.controls .icon-btn { color: var(--text); }
+.controls .icon-btn svg { width: 22px; height: 22px; }
+.skip-btn { position: relative; }
+.skip-btn small { position: absolute; font-size: 8.5px; font-weight: 700; top: 50%; left: 50%; transform: translate(-50%, -38%); }
+.play-btn { width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+  display: grid; place-items: center; transition: transform .12s; position: relative; }
+.play-btn:hover { transform: scale(1.05); }
+.play-btn svg { width: 24px; height: 24px; }
+.play-btn .spin { position: absolute; inset: -5px; border-radius: 50%; border: 3px solid transparent; border-top-color: var(--accent);
+  animation: spin .8s linear infinite; display: none; }
+.play-btn.loading .spin { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.scrub { display: flex; align-items: center; gap: 10px; width: 100%; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.scrub-bar { flex: 1; height: 16px; display: flex; align-items: center; cursor: pointer; position: relative; }
+.scrub-bar .track { height: 5px; width: 100%; border-radius: 5px; background: var(--surface-3); position: relative; overflow: hidden; }
+.scrub-bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 5px; }
+.scrub-bar .knob { position: absolute; width: 13px; height: 13px; border-radius: 50%; background: var(--text); top: 50%; transform: translate(-50%, -50%); opacity: 0; transition: opacity .15s; }
+.scrub-bar:hover .knob { opacity: 1; }
+.scrub-bar .hover-tip { position: absolute; bottom: 20px; transform: translateX(-50%); background: var(--surface-3); color: var(--text); font-size: 12px; padding: 4px 8px; border-radius: 6px; white-space: nowrap; display: none; pointer-events: none; }
+.scrub-bar:hover .hover-tip { display: block; }
+.right { display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
+.speed { display: flex; align-items: center; background: var(--surface-2); border-radius: 999px; border: 1px solid var(--line); }
+.speed button { width: 32px; height: 34px; display: grid; place-items: center; color: var(--muted); border-radius: 999px; }
+.speed button:hover { color: var(--text); background: var(--surface-3); }
+.speed button svg { width: 15px; height: 15px; }
+.speed .val { min-width: 50px; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; cursor: pointer; }
+.vol { width: 80px; accent-color: var(--accent); }
+.badge { position: absolute; top: 3px; right: 1px; font-size: 9.5px; font-weight: 700; background: var(--accent); color: var(--accent-ink); border-radius: 8px; padding: 0 4px; line-height: 15px; }
+
+/* ---------- popovers / modal / toast ---------- */
+.pop { position: fixed; z-index: 50; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow); padding: 10px; min-width: 220px; display: none; max-height: 70vh; overflow-y: auto; }
+.pop.show { display: block; animation: pop .14s ease-out; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } }
+.pop h4 { margin: 6px 10px 6px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--faint); font-weight: 600; }
+.pop-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border-radius: 9px; font-size: 14px; }
+.pop-item:hover { background: var(--surface-2); }
+.pop-item.sel { color: var(--accent); font-weight: 600; }
+.pop-item .grow { flex: 1; }
+.pop-item .hint { color: var(--faint); font-size: 12px; }
+.pop-item .mini { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
+.pop-item .mini:hover { background: var(--surface-3); color: var(--text); }
+.pop-item .mini svg { width: 13px; height: 13px; }
+.pop .row { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 6px 8px; }
+.chip { padding: 6px 12px; border-radius: 999px; background: var(--surface-2); font-size: 13px; font-weight: 500; }
+.chip:hover { background: var(--surface-3); }
+.chip.sel { background: var(--accent); color: var(--accent-ink); }
+
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 60; display: none; place-items: center; backdrop-filter: blur(3px); }
+.scrim.show { display: grid; }
+.modal { width: min(500px, 92vw); background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 28px; box-shadow: var(--shadow); }
+.modal h2 { margin: 0 0 4px; font: 600 24px var(--read); }
+.modal .sub { color: var(--muted); margin-bottom: 22px; }
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+.seg { display: flex; gap: 8px; }
+.seg button { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); text-align: left; }
+.seg button b { display: block; font-size: 14px; }
+.seg button span { font-size: 12px; color: var(--muted); }
+.seg button.sel { border-color: var(--accent); background: var(--accent-soft); }
+.select, .text { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); outline: none; }
+.select:focus, .text:focus { border-color: var(--accent); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.export-progress { margin: 6px 0 4px; }
+.export-progress .progress { height: 8px; }
+.export-status { color: var(--muted); font-size: 13px; margin-top: 8px; }
+kbd { font: 600 12px var(--ui); background: var(--surface-3); border-radius: 6px; padding: 2px 7px; border-bottom: 2px solid var(--line); }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: center; font-size: 14px; }
+
+.toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%) translateY(10px); z-index: 80;
+  background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 500; font-size: 14px;
+  opacity: 0; transition: .2s; pointer-events: none; box-shadow: var(--shadow); }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+.drop { position: fixed; inset: 0; z-index: 90; display: none; place-items: center; background: rgba(20,18,15,.82); }
+.drop.show { display: grid; }
+.drop div { border: 2px dashed var(--accent); border-radius: 28px; padding: 60px 80px; text-align: center; color: var(--text); font: 600 24px var(--read); }
+.engine-pill { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+.engine-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+
+@media (max-width: 1000px) {
+  .book-layout { grid-template-columns: 0 1fr; }
+  .book-layout.open-mobile { grid-template-columns: 280px 1fr; }
+  .player { grid-template-columns: 1fr auto; }
+  .player .now { display: none; }
+  .vol { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- LIBRARY -->
+  <section class="view active" id="libraryView">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark" data-icon="waves"></div>Narrator</div>
+      <span class="engine-pill" id="enginePill" hidden>Warming up the voice…</span>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="themeBtn" title="Light / dark"></button>
+      <button class="icon-btn" title="Keyboard shortcuts (?)" onclick="openModal('keysModal')" data-icon="keyboard"></button>
+      <button class="btn primary" id="addBtn"><span data-icon="plus"></span>Add books</button>
+    </header>
+    <div class="library-scroll" id="libraryScroll"></div>
+  </section>
+
+  <!-- BOOK -->
+  <section class="view" id="bookView">
+    <div class="book-layout" id="bookLayout">
+      <aside class="sidebar">
+        <div class="side-head" id="sideHead"></div>
+        <div class="tabs">
+          <button class="tab active" data-tab="chapters">Chapters</button>
+          <button class="tab" data-tab="bookmarks">Bookmarks</button>
+        </div>
+        <div class="side-list" id="sideList"></div>
+      </aside>
+      <div class="reader-wrap">
+        <div class="reader-top">
+          <button class="icon-btn" title="Back to library (Esc)" onclick="showLibrary()" data-icon="back"></button>
+          <button class="icon-btn" title="Chapters" id="sideToggle" data-icon="list"></button>
+          <span class="crumb" id="crumb"></span>
+          <div class="spacer"></div>
+          <button class="icon-btn" title="Smaller text" onclick="fontSize(-1)"><b style="font-size:13px">A−</b></button>
+          <button class="icon-btn" title="Larger text" onclick="fontSize(1)"><b style="font-size:16px">A+</b></button>
+          <button class="icon-btn" id="themeBtn2" title="Light / dark"></button>
+          <button class="btn" onclick="openExport()"><span data-icon="download"></span>Make audiobook file</button>
+        </div>
+        <div class="reader" id="reader"><div class="reader-inner" id="readerInner"></div></div>
+        <button class="btn primary follow-pill" id="followPill" onclick="follow(true)"><span data-icon="target"></span>Back to narration</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAYER -->
+  <footer class="player" id="player">
+    <div class="now" onclick="openBook(book.id)">
+      <div id="nowCover"></div>
+      <div class="now-text"><div class="now-title" id="nowTitle"></div><div class="now-sub" id="nowSub"></div></div>
+    </div>
+    <div class="center">
+      <div class="controls">
+        <button class="icon-btn" title="Previous chapter (Shift+←)" onclick="prevChapter()" data-icon="prevch"></button>
+        <button class="icon-btn skip-btn" title="Back 15 seconds (←)" onclick="seekBy(-15)"><span data-icon="rew"></span><small>15</small></button>
+        <button class="icon-btn" title="Previous paragraph (↑)" onclick="stepPara(-1)" data-icon="up"></button>
+        <button class="play-btn" id="playBtn" title="Play / pause (Space)" onclick="togglePlay()"><span class="spin"></span><span id="playIcon"></span></button>
+        <button class="icon-btn" title="Next paragraph (↓)" onclick="stepPara(1)" data-icon="down"></button>
+        <button class="icon-btn skip-btn" title="Forward 15 seconds (→)" onclick="seekBy(15)"><span data-icon="fwd"></span><small>15</small></button>
+        <button class="icon-btn" title="Next chapter (Shift+→)" onclick="nextChapter()" data-icon="nextch"></button>
+      </div>
+      <div class="scrub">
+        <span id="scrubLeft">¶ 1 / 1</span>
+        <div class="scrub-bar" id="scrubBar"><div class="track"><div class="fill" id="scrubFill"></div></div><div class="knob" id="scrubKnob"></div><div class="hover-tip" id="scrubTip"></div></div>
+        <span id="scrubRight">—</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="speed" title="Speed ( [ and ] )">
+        <button onclick="setSpeed(S.settings.speed - 0.1)" data-icon="minus"></button>
+        <span class="val" id="speedVal" data-pop="speedPop">1.0×</span>
+        <button onclick="setSpeed(S.settings.speed + 0.1)" data-icon="plus"></button>
+      </div>
+      <button class="icon-btn" title="Voice" data-pop="voicePop" data-icon="voice"></button>
+      <button class="icon-btn" title="Sleep timer" data-pop="sleepPop" id="sleepBtn"><span data-icon="moon"></span></button>
+      <button class="icon-btn" title="Bookmark this spot (B)" onclick="toggleBookmark()" id="bmBtn" data-icon="bookmark"></button>
+      <button class="icon-btn" title="Mute" onclick="toggleMute()" id="volIcon" data-icon="volume"></button>
+      <input type="range" class="vol" id="vol" min="0" max="1.6" step="0.01" title="Volume">
+    </div>
+  </footer>
+</div>
+
+<!-- popovers -->
+<div class="pop" id="speedPop">
+  <h4>Playback speed</h4>
+  <div class="row" id="speedChips"></div>
+</div>
+<div class="pop" id="voicePop" style="width:300px"></div>
+<div class="pop" id="sleepPop">
+  <h4>Sleep timer</h4>
+  <div id="sleepItems"></div>
+</div>
+
+<!-- export modal -->
+<div class="scrim" id="exportModal">
+  <div class="modal">
+    <h2>Make an audiobook file</h2>
+    <div class="sub" id="exportSub">Save the whole book as audio to play anywhere — your phone, car, or audiobook app.</div>
+    <div id="exportForm">
+      <div class="field"><label>Format</label>
+        <div class="seg" id="fmtSeg">
+          <button data-v="m4b" class="sel"><b>Audiobook (.m4b)</b><span>One file with chapters</span></button>
+          <button data-v="mp3"><b>MP3 files</b><span>One file per chapter</span></button>
+        </div>
+      </div>
+      <div class="field"><label>Voice</label><select class="select" id="exVoice"></select></div>
+      <div class="field" style="display:flex;gap:12px">
+        <div style="flex:1"><label>Speaking speed</label>
+          <select class="select" id="exSpeed"><option>0.8</option><option>0.9</option><option selected>1.0</option><option>1.1</option><option>1.2</option><option>1.3</option><option>1.5</option></select></div>
+        <div style="flex:1"><label>Chapters</label><input class="text" id="exChapters" placeholder="All (or e.g. 2-12)"></div>
+      </div>
+    </div>
+    <div id="exportRun" hidden>
+      <div class="export-progress"><div class="progress"><div id="exFill" style="width:0"></div></div></div>
+      <div class="export-status" id="exStatus"></div>
+    </div>
+    <div class="modal-actions" id="exportActions"></div>
+  </div>
+</div>
+
+<!-- shortcuts -->
+<div class="scrim" id="keysModal">
+  <div class="modal">
+    <h2>Keyboard shortcuts</h2>
+    <div class="sub">Everything you can do without the mouse.</div>
+    <div class="keys">
+      <span><kbd>Space</kbd></span><span>Play / pause</span>
+      <span><kbd>←</kbd> <kbd>→</kbd></span><span>Back / forward 15 seconds</span>
+      <span><kbd>↑</kbd> <kbd>↓</kbd></span><span>Previous / next paragraph</span>
+      <span><kbd>Shift</kbd> + <kbd>←</kbd> <kbd>→</kbd></span><span>Previous / next chapter</span>
+      <span><kbd>[</kbd> <kbd>]</kbd></span><span>Slower / faster</span>
+      <span><kbd>B</kbd></span><span>Bookmark this spot</span>
+      <span><kbd>C</kbd></span><span>Jump back to what's being read</span>
+      <span><kbd>Esc</kbd></span><span>Back to library</span>
+      <span>Click any paragraph</span><span>Start reading from there</span>
+    </div>
+    <div class="modal-actions"><button class="btn primary" onclick="closeModals()">Got it</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="drop" id="drop"><div>Drop books to add them</div></div>
+<input type="file" id="fileInput" multiple accept=".epub,.pdf,.docx,.txt,.md" hidden>
+
+<script>
+// ------------------------------------------------------------------ icons
+const ICONS = {
+  play: '<path d="M7 4.6v14.8c0 .8.9 1.3 1.6.8l11.3-7.4c.6-.4.6-1.3 0-1.7L8.6 3.8C7.9 3.3 7 3.8 7 4.6z" fill="currentColor"/>',
+  pause: '<rect x="6" y="4.5" width="4.2" height="15" rx="1.3" fill="currentColor"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.3" fill="currentColor"/>',
+  prevch: '<path d="M18.5 5.5v13c0 .7-.8 1.1-1.4.7L8 12.8a.9.9 0 0 1 0-1.6l9.1-6.4c.6-.4 1.4 0 1.4.7z" fill="currentColor"/><rect x="5" y="5" width="2.3" height="14" rx="1" fill="currentColor"/>',
+  nextch: '<path d="M5.5 5.5v13c0 .7.8 1.1 1.4.7l9.1-6.4a.9.9 0 0 0 0-1.6L6.9 4.8c-.6-.4-1.4 0-1.4.7z" fill="currentColor"/><rect x="16.7" y="5" width="2.3" height="14" rx="1" fill="currentColor"/>',
+  rew: '<g class="icon-stroke"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4.5 3.5v4h4"/></g>',
+  fwd: '<g class="icon-stroke"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M19.5 3.5v4h-4"/></g>',
+  up: '<g class="icon-stroke"><path d="M4 7h11M4 12h8M4 17h11"/><path d="M19 10V4m-2.5 2.5L19 4l2.5 2.5"/></g>',
+  down: '<g class="icon-stroke"><path d="M4 7h11M4 12h8M4 17h11"/><path d="M19 14v6m-2.5-2.5L19 20l2.5-2.5"/></g>',
+  plus: '<path class="icon-stroke" d="M12 5v14M5 12h14"/>',
+  minus: '<path class="icon-stroke" d="M5 12h14"/>',
+  back: '<path class="icon-stroke" d="M15 18l-6-6 6-6"/>',
+  list: '<path class="icon-stroke" d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
+  voice: '<g class="icon-stroke"><circle cx="9" cy="8" r="3.6"/><path d="M2.5 20.5a6.5 6.5 0 0 1 13 0"/><path d="M18 6.5a5 5 0 0 1 0 7M20.6 4a8.6 8.6 0 0 1 0 12"/></g>',
+  moon: '<path class="icon-stroke" d="M20 14.6A8 8 0 0 1 9.4 4a8 8 0 1 0 10.6 10.6z"/>',
+  sun: '<g class="icon-stroke"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4L6 18M18 6l1.4-1.4"/></g>',
+  bookmark: '<path class="icon-stroke" d="M6.5 3.5h11v17l-5.5-4-5.5 4z"/>',
+  bookmarkOn: '<path d="M6.5 3.5h11v17l-5.5-4-5.5 4z" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>',
+  volume: '<g class="icon-stroke"><path d="M4 9.5v5h3.5l5 4v-13l-5 4z"/><path d="M16 9a4.2 4.2 0 0 1 0 6M18.8 6.5a8 8 0 0 1 0 11"/></g>',
+  mute: '<g class="icon-stroke"><path d="M4 9.5v5h3.5l5 4v-13l-5 4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></g>',
+  download: '<path class="icon-stroke" d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/>',
+  x: '<path class="icon-stroke" d="M6 6l12 12M18 6L6 18"/>',
+  waves: '<path class="icon-stroke" d="M4 10v4M8 7v10M12 4v16M16 8v8M20 11v2"/>',
+  book: '<g class="icon-stroke"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></g>',
+  keyboard: '<g class="icon-stroke"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9"/></g>',
+  target: '<g class="icon-stroke"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/></g>',
+  folder: '<path class="icon-stroke" d="M3.5 6.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  check: '<path class="icon-stroke" d="M5 12.5l4.5 4.5L19 7.5"/>',
+};
+const ic = n => `<svg viewBox="0 0 24 24">${ICONS[n]}</svg>`;
+function paintIcons(root = document) { root.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = ic(el.dataset.icon); }); }
+
+// ------------------------------------------------------------------ helpers
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(url, opts) { const r = await fetch(url, opts); if (!r.ok) throw new Error(await r.text().catch(() => r.status)); return r.json(); }
+const post = (url, body) => api(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+let toastTimer;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800); }
+function fmtMin(sec) { if (!isFinite(sec)) return '—'; const m = Math.round(sec / 60); if (m < 1) return '<1 min'; if (m < 60) return m + ' min'; return Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; }
+const CHARS_PER_SEC = 15.5;   // Kokoro at 1.0x, roughly
+
+const VOICE_NAMES = { af: 'American', am: 'American', bf: 'British', bm: 'British' };
+const voiceLabel = v => v.split('_')[1].replace(/^\w/, c => c.toUpperCase());
+const voiceSub = v => `${VOICE_NAMES[v.slice(0,2)] || ''} ${v[1] === 'f' ? 'female' : 'male'}`;
+
+function coverHTML(b, cls = '') {
+  let h = 0; for (const c of b.title || '') h = (h * 31 + c.charCodeAt(0)) % 360;
+  const gen = `<div class="cover gen ${cls}" style="--h:${h}"><div class="t">${esc(b.title)}</div><div class="a">${esc(b.author)}</div></div>`;
+  return `<div class="cover ${cls}" data-gen='${esc(gen)}'><img src="/api/cover/${b.id}" alt="" onerror="this.parentNode.outerHTML=this.parentNode.dataset.gen">${b.format ? `<span class="fmt">${b.format}</span>` : ''}</div>`;
+}
+
+// ------------------------------------------------------------------ state
+let S = { settings: { speed: 1, volume: 1, voice: 'af_heart', theme: 'dark', fontSize: 20 }, library: [], voices: {} };
+let book = null;               // {id, title, author, chapters:[{title, paras}], bookmarks}
+let pos = { ch: 0, para: 0 };
+let resumeT = 0;               // seconds into the paragraph to resume from
+let playing = false;
+let token = 0;
+let loadedKey = null;
+let following = true;
+let muted = false;
+let sleep = { mode: null, until: 0 };
+const audio = new Audio();
+// Volume runs through Web Audio so it can go past 100% (up to 160%), with a limiter to stop clipping.
+let actx = null, gainNode = null, gainScale = 1;
+function ensureAudioGraph() {
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return; }
+  try {
+    actx = new AudioContext();
+    const src = actx.createMediaElementSource(audio);
+    gainNode = actx.createGain();
+    const limiter = actx.createDynamicsCompressor();
+    limiter.threshold.value = -2; limiter.knee.value = 0; limiter.ratio.value = 20;
+    limiter.attack.value = 0.002; limiter.release.value = 0.1;
+    src.connect(gainNode).connect(limiter).connect(actx.destination);
+  } catch (e) { actx = null; gainNode = null; }
+  applyGain();
+}
+function applyGain() {
+  const g = S.settings.volume * gainScale;
+  if (gainNode) { gainNode.gain.value = g; audio.volume = 1; } else audio.volume = Math.min(1, g);
+}
+audio.preservesPitch = true;
+const pre = new Map();
+
+let settingsTimer;
+function saveSettings() { clearTimeout(settingsTimer); settingsTimer = setTimeout(() => post('/api/settings', S.settings), 400); }
+
+let progressTimer, lastProgress = 0;
+function saveProgress(now = false) {
+  if (!book) return;
+  const t = loadedKey === key(pos.ch, pos.para) ? audio.currentTime || 0 : resumeT;
+  const body = { book: book.id, ch: pos.ch, para: pos.para, t: Math.round(t * 10) / 10 };
+  const entry = S.library.find(b => b.id === book.id); if (entry) Object.assign(entry, body, { opened: Date.now() / 1000 });
+  clearTimeout(progressTimer);
+  const send = () => { lastProgress = Date.now(); post('/api/progress', body).catch(() => {}); };
+  if (now || Date.now() - lastProgress > 4000) send(); else progressTimer = setTimeout(send, 1500);
+}
+
+// ------------------------------------------------------------------ library
+async function refresh() {
+  const st = await api('/api/state');
+  S.settings = st.settings; S.library = st.library; S.voices = st.voices;
+  applyTheme(); setFont(); updateEngine(st.engine, st.engineError);
+}
+
+function bookPercent(b) {
+  if (!b.paraCounts || !b.paraCounts.length) return 0;
+  const total = b.paraCounts.reduce((a, c) => a + c, 0) || 1;
+  const done = b.paraCounts.slice(0, b.ch || 0).reduce((a, c) => a + c, 0) + (b.para || 0);
+  return Math.min(100, Math.round(done / total * 100));
+}
+
+function renderLibrary() {
+  const el = $('#libraryScroll');
+  if (!S.library.length) {
+    el.innerHTML = `<div class="empty"><div class="big">${ic('book')}</div><h2>Your library is empty</h2>
+      <p>Add an EPUB, PDF, Word document or text file and it will be read aloud to you. You can also drag files anywhere onto this window.</p>
+      <p style="margin-top:24px"><button class="btn primary" onclick="addBooks()">${ic('plus')}Add your first book</button></p></div>`;
+    return;
+  }
+  const [last, ...rest] = S.library;
+  const pct = bookPercent(last);
+  const lastLabel = last.opened ? 'Continue listening' : 'Start listening';
+  let html = `<h3 class="section-title">${lastLabel}</h3>
+    <div class="hero" onclick="openBook('${last.id}', true)">
+      ${coverHTML(last)}
+      <div style="min-width:0">
+        <div class="meta">${esc(last.author || 'Unknown author')}</div>
+        <h2>${esc(last.title)}</h2>
+        <div class="chapter-now">${last.chapterCount ? `Chapter ${(last.ch || 0) + 1} of ${last.chapterCount}` : ''}</div>
+        <div class="progress"><div style="width:${pct}%"></div></div>
+        <div class="progress-label">${pct}% complete</div>
+      </div>
+      <div class="hero-play">${ic('play')}</div>
+    </div>`;
+  if (rest.length) {
+    html += `<h3 class="section-title">Library</h3><div class="grid">` + rest.map(b => {
+      const p = bookPercent(b);
+      return `<div class="card ${b.missing ? 'missing' : ''}" onclick="openBook('${b.id}')" title="${b.missing ? 'File was moved or deleted' : ''}">
+        ${coverHTML(b)}
+        <button class="remove" title="Remove from library" onclick="event.stopPropagation(); removeBook('${b.id}')">${ic('x')}</button>
+        <h3>${esc(b.title)}</h3><div class="author">${esc(b.author || '')}</div>
+        <div class="progress"><div style="width:${p}%"></div></div>
+        <div class="progress-label">${b.opened ? p + '%' : 'New'}${b.chapterCount ? ' · ' + b.chapterCount + ' chapters' : ''}</div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+  el.innerHTML = html;
+}
+
+async function removeBook(id) {
+  const b = S.library.find(x => x.id === id);
+  if (!confirm(`Remove “${b.title}” from your library? (The file itself is not deleted.)`)) return;
+  await fetch('/api/book/' + id, { method: 'DELETE' });
+  if (book && book.id === id) { stop(); book = null; $('#player').classList.remove('show'); }
+  await refresh(); renderLibrary();
+}
+
+async function addBooks() {
+  if (window.pywebview && window.pywebview.api) {
+    const added = await window.pywebview.api.pick_files();
+    if (added && added.length) { toast(`Added ${added.length} book${added.length > 1 ? 's' : ''}`); await refresh(); renderLibrary(); if (added.length === 1) openBook(added[0]); }
+  } else $('#fileInput').click();
+}
+async function upload(files) {
+  const fd = new FormData(); let n = 0;
+  for (const f of files) if (/\.(epub|pdf|docx|txt|md)$/i.test(f.name)) { fd.append('files', f); n++; }
+  if (!n) { toast('Those files aren’t books I can read (EPUB, PDF, DOCX, TXT)'); return; }
+  toast(`Adding ${n} book${n > 1 ? 's' : ''}…`);
+  const r = await api('/api/upload', { method: 'POST', body: fd });
+  await refresh(); renderLibrary();
+  if (r.added.length === 1) openBook(r.added[0]);
+}
+$('#addBtn').onclick = addBooks;
+$('#fileInput').onchange = e => { upload(e.target.files); e.target.value = ''; };
+let dragDepth = 0;
+addEventListener('dragenter', e => { e.preventDefault(); if (e.dataTransfer.types.includes('Files')) { dragDepth++; $('#drop').classList.add('show'); } });
+addEventListener('dragleave', e => { if (--dragDepth <= 0) { dragDepth = 0; $('#drop').classList.remove('show'); } });
+addEventListener('dragover', e => e.preventDefault());
+let nativeDropSeen = 0;
+addEventListener('drop', e => {
+  e.preventDefault(); dragDepth = 0; $('#drop').classList.remove('show');
+  const files = [...e.dataTransfer.files]; if (!files.length) return;
+  if (!window.pywebview) { upload(files); return; }
+  // In the app window, Python receives the real file paths; only upload if that didn't arrive.
+  const asked = Date.now();
+  setTimeout(() => { if (nativeDropSeen < asked) upload(files); }, 2000);
+});
+function hideDrop() { dragDepth = 0; $('#drop').classList.remove('show'); }
+// never let the drop overlay get stuck: any click, mouse move or key dismisses it
+['mousemove', 'mousedown', 'keydown'].forEach(ev => addEventListener(ev, () => { if ($('#drop').classList.contains('show')) hideDrop(); }, true));
+window.onBooksAdded = async (ids, fromDrop) => {
+  hideDrop();
+  if (fromDrop) nativeDropSeen = Date.now();
+  if (!ids || !ids.length) { if (fromDrop) toast('Those files aren’t books I can read (EPUB, PDF, DOCX, TXT)'); return; }
+  toast(`Added ${ids.length} book${ids.length > 1 ? 's' : ''}`);
+  await refresh(); renderLibrary();
+  if (ids.length === 1) openBook(ids[0]); else showLibrary();
+};
+
+function showLibrary() {
+  $('#libraryView').classList.add('active'); $('#bookView').classList.remove('active');
+  if (book) saveProgress(true);
+  renderLibrary();
+}
+
+// ------------------------------------------------------------------ book view
+async function openBook(id, autoplay = false) {
+  if (book && book.id === id) { showBook(); if (autoplay && !playing) togglePlay(); return; }
+  stop();
+  try { book = await api('/api/book/' + id); }
+  catch (e) { toast('Couldn’t open that book — was the file moved?'); return; }
+  pre.clear(); loadedKey = null;
+  pos = { ch: clamp(book.pos.ch, 0, book.chapters.length - 1), para: 0 };
+  pos.para = clamp(book.pos.para, 0, book.chapters[pos.ch].paras.length - 1);
+  resumeT = book.pos.t || 0;
+  const entry = S.library.find(b => b.id === id);
+  book.format = entry && entry.format;
+  following = true;
+  showBook();
+  renderSide(); renderChapter(); updatePlayer();
+  $('#player').classList.add('show');
+  if (autoplay) togglePlay();
+  else if (book.pos.ch || book.pos.para) toast(`Picking up where you left off — chapter ${pos.ch + 1}`);
+}
+function showBook() {
+  $('#libraryView').classList.remove('active'); $('#bookView').classList.add('active');
+  requestAnimationFrame(() => scrollToCurrent(false));
+}
+
+let sideTab = 'chapters';
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  sideTab = t.dataset.tab; document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t)); renderSide();
+});
+$('#sideToggle').onclick = () => {
+  const l = $('#bookLayout');
+  if (innerWidth <= 1000) l.classList.toggle('open-mobile'); else l.classList.toggle('collapsed');
+};
+
+function renderSide() {
+  $('#sideHead').innerHTML = `${coverHTML(book)}<div style="min-width:0"><h2>${esc(book.title)}</h2><div class="meta">${esc(book.author || '')}</div></div>`;
+  const list = $('#sideList');
+  if (sideTab === 'chapters') {
+    list.innerHTML = book.chapters.map((c, i) => `<button class="ch-item ${i < pos.ch ? 'done' : ''} ${i === pos.ch ? 'current' : ''} ${i === pos.ch && playing ? 'playing' : ''}" onclick="gotoChapter(${i})">
+      <span class="num">${i + 1}</span><span class="name">${esc(c.title)}</span><span class="eq"><i></i><i></i><i></i></span></button>`).join('');
+    const cur = list.querySelector('.current'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+  } else {
+    const bms = book.bookmarks || [];
+    list.innerHTML = bms.length ? bms.map((b, i) => `<div class="bm-item" onclick="playAt(${b.ch}, ${b.para})">
+      <div class="bm-text"><b>Chapter ${b.ch + 1} · ${esc(book.chapters[b.ch]?.title || '')}</b>${esc(b.snippet)}</div>
+      <button class="icon-btn" title="Delete bookmark" onclick="event.stopPropagation(); removeBookmark(${i})">${ic('x')}</button></div>`).join('')
+      : `<div class="side-empty">No bookmarks yet. Press the bookmark button (or <kbd>B</kbd>) while listening to save a spot.</div>`;
+  }
+}
+
+function renderChapter() {
+  const ch = book.chapters[pos.ch];
+  const titleIsPara = ch.paras[0] === ch.title;
+  const marked = new Set((book.bookmarks || []).filter(b => b.ch === pos.ch).map(b => b.para));
+  let html = `<div class="eyebrow">Chapter ${pos.ch + 1} of ${book.chapters.length}</div>`;
+  html += titleIsPara ? `<h1 class="para" data-i="0">${esc(ch.title)}</h1>` : `<h1>${esc(ch.title)}</h1>`;
+  ch.paras.forEach((p, i) => { if (!(titleIsPara && i === 0)) html += `<p class="para ${marked.has(i) ? 'bookmarked' : ''}" data-i="${i}">${esc(p)}</p>`; });
+  html += `<div class="chapter-end">
+    ${pos.ch > 0 ? `<button class="btn" onclick="gotoChapter(${pos.ch - 1})">${ic('back')}Previous chapter</button>` : '<span></span>'}
+    ${pos.ch < book.chapters.length - 1 ? `<button class="btn primary" onclick="gotoChapter(${pos.ch + 1})">Next: ${esc(book.chapters[pos.ch + 1].title.slice(0, 40))}</button>` : '<span class="progress-label">The end</span>'}</div>`;
+  $('#readerInner').innerHTML = html;
+  $('#readerInner').dataset.ch = pos.ch;
+  $('#crumb').textContent = `${book.title} — ${ch.title}`;
+  $('#reader').scrollTop = 0;
+  highlight();
+}
+$('#readerInner').addEventListener('click', e => {
+  const p = e.target.closest('.para'); if (!p || window.getSelection().toString()) return;
+  following = true; playAt(pos.ch, +p.dataset.i);
+});
+
+function highlight() {
+  document.querySelectorAll('#readerInner .para.current').forEach(e => e.classList.remove('current'));
+  const el = document.querySelector(`#readerInner .para[data-i="${pos.para}"]`);
+  if (el) el.classList.add('current');
+  $('#reader').classList.toggle('dim', playing);
+  scrollToCurrent(true);
+  updateBookmarkBtn();
+}
+function scrollToCurrent(smooth) {
+  if (!following) return;
+  const el = document.querySelector('#readerInner .para.current'); if (!el) return;
+  programmaticScroll = Date.now();
+  el.scrollIntoView({ block: 'center', behavior: smooth ? 'smooth' : 'auto' });
+}
+let programmaticScroll = 0;
+['wheel', 'touchmove'].forEach(ev => $('#reader').addEventListener(ev, () => follow(false), { passive: true }));
+$('#reader').addEventListener('mousedown', e => { if (e.target === $('#reader')) follow(false); });   // scrollbar drag
+function follow(on) {
+  following = on;
+  $('#followPill').classList.toggle('show', !on && !!book);
+  if (on) scrollToCurrent(true);
+}
+
+// ------------------------------------------------------------------ playback
+const key = (ch, p) => `${book.id}|${S.settings.voice}|${ch}|${p}`;
+function fetchPara(ch, p) {
+  const k = key(ch, p);
+  if (!pre.has(k)) {
+    const prom = fetch(`/api/tts?book=${book.id}&ch=${ch}&p=${p}&voice=${S.settings.voice}`)
+      .then(r => { if (!r.ok) throw new Error('Audio failed (' + r.status + ')'); return r.blob(); })
+      .then(b => URL.createObjectURL(b));
+    prom.catch(() => pre.delete(k));
+    pre.set(k, prom);
+    while (pre.size > 24) {
+      const [oldK, oldP] = pre.entries().next().value; pre.delete(oldK);
+      oldP.then(u => { if (audio.src !== u) URL.revokeObjectURL(u); }).catch(() => {});
+    }
+  }
+  return pre.get(k);
+}
+function following_(ch, p, n = 1) {   // move n paragraphs (negative = back) across chapters
+  while (n > 0) { if (p + 1 < book.chapters[ch].paras.length) p++; else if (ch + 1 < book.chapters.length) { ch++; p = 0; } else return null; n--; }
+  while (n < 0) { if (p > 0) p--; else if (ch > 0) { ch--; p = book.chapters[ch].paras.length - 1; } else { p = 0; break; } n++; }
+  return [ch, p];
+}
+
+async function playAt(ch, p, t = 0, autoplay = true) {
+  const my = ++token;
+  if (autoplay) ensureAudioGraph();
+  const chChanged = String(ch) !== $('#readerInner').dataset.ch;
+  pos = { ch, para: p }; resumeT = t;
+  if (chChanged) { renderChapter(); renderSide(); } else highlight();
+  saveProgress(true);
+  if (!autoplay) { audio.pause(); loadedKey = null; playing = false; updatePlayer(); return; }
+  playing = true; setLoading(true); updatePlayer();
+  try {
+    const url = await fetchPara(ch, p);
+    if (my !== token) return;
+    audio.src = url; loadedKey = key(ch, p);
+    audio.defaultPlaybackRate = audio.playbackRate = S.settings.speed;
+    if (t) { await new Promise(r => audio.addEventListener('loadedmetadata', r, { once: true })); audio.currentTime = Math.min(t, (audio.duration || t) - 0.2); }
+    if (my !== token) return;
+    await audio.play();
+  } catch (e) {
+    if (my === token) { playing = false; toast(String(e.message || e).slice(0, 120)); }
+  } finally {
+    if (my === token) { setLoading(false); updatePlayer(); }
+  }
+  // fetch the next few paragraphs ahead of time so there are no gaps
+  let n = [ch, p];
+  for (let i = 0; i < 3 && my === token; i++) { n = following_(n[0], n[1]); if (!n) break; await fetchPara(n[0], n[1]).catch(() => {}); }
+}
+
+audio.addEventListener('ended', () => {
+  if (!playing) return;
+  const my = token;
+  const n = following_(pos.ch, pos.para);
+  if (!n) { playing = false; updatePlayer(); toast('The end 📖'); saveProgress(true); return; }
+  if (n[0] !== pos.ch && sleep.mode === 'chapter') { clearSleep(); pauseNow(); playAt(n[0], n[1], 0, false); toast('Sleep timer: stopped at end of chapter'); return; }
+  setTimeout(() => { if (my === token && playing) playAt(n[0], n[1]); }, n[0] !== pos.ch ? 1400 : 180);
+});
+audio.addEventListener('timeupdate', () => { updateScrub(); if (playing) saveProgress(); checkSleep(); });
+
+function pauseNow() { token++; audio.pause(); playing = false; setLoading(false); resumeT = audio.currentTime || resumeT; saveProgress(true); updatePlayer(); }
+function stop() { if (book) pauseNow(); }
+function togglePlay() {
+  if (!book) return;
+  if (playing) { pauseNow(); return; }
+  if (loadedKey === key(pos.ch, pos.para) && audio.src && !audio.ended) {
+    ensureAudioGraph(); playing = true; audio.playbackRate = S.settings.speed; audio.play(); updatePlayer(); highlight();
+  } else playAt(pos.ch, pos.para, resumeT);
+}
+function stepPara(n) {
+  const t = following_(pos.ch, pos.para, n); if (!t) return;
+  following = true; follow(true);
+  playAt(t[0], t[1], 0, playing);
+}
+function seekBy(sec) {
+  if (loadedKey !== key(pos.ch, pos.para) || !audio.duration) {   // nothing loaded: fall back to paragraphs
+    if (sec < 0) stepPara(-1); else stepPara(1); return;
+  }
+  let t = audio.currentTime + sec * S.settings.speed;
+  if (t < 0) {   // spill into the previous paragraph
+    const prev = following_(pos.ch, pos.para, -1);
+    if (prev && (prev[0] !== pos.ch || prev[1] !== pos.para)) {
+      fetchPara(prev[0], prev[1]).then(u => { const a = new Audio(u); a.addEventListener('loadedmetadata', () => playAt(prev[0], prev[1], Math.max(0, a.duration + t), playing), { once: true }); });
+      return;
+    }
+    t = 0;
+  }
+  if (t >= audio.duration) { stepPara(1); return; }
+  audio.currentTime = t; resumeT = t; updateScrub();
+}
+function gotoChapter(i) { following = true; follow(true); playAt(i, 0, 0, playing); if (innerWidth <= 1000) $('#bookLayout').classList.remove('open-mobile'); }
+function nextChapter() { if (pos.ch < book.chapters.length - 1) gotoChapter(pos.ch + 1); }
+function prevChapter() {
+  // like a CD player: first press restarts the chapter, second goes back one
+  if (pos.para > 1 || (loadedKey && audio.currentTime > 3)) gotoChapter(pos.ch); else if (pos.ch > 0) gotoChapter(pos.ch - 1);
+}
+
+function setLoading(on) { $('#playBtn').classList.toggle('loading', on); }
+function updatePlayer() {
+  if (!book) return;
+  $('#playIcon').innerHTML = ic(playing ? 'pause' : 'play');
+  $('#playIcon').style.marginLeft = playing ? '0' : '3px';
+  $('#nowCover').innerHTML = coverHTML(book);
+  $('#nowTitle').textContent = book.chapters[pos.ch].title;
+  $('#nowSub').textContent = book.title;
+  $('#speedVal').textContent = (S.settings.speed === 1 ? '1.0' : String(S.settings.speed)) + '×';
+  document.querySelectorAll('.ch-item').forEach((el, i) => el.classList.toggle('playing', i === pos.ch && playing));
+  $('#reader').classList.toggle('dim', playing);
+  document.title = playing ? `▶ ${book.title}` : 'Narrator';
+  updateScrub();
+}
+function updateScrub() {
+  if (!book) return;
+  const paras = book.chapters[pos.ch].paras;
+  const frac = loadedKey === key(pos.ch, pos.para) && audio.duration ? audio.currentTime / audio.duration : 0;
+  const pct = (pos.para + frac) / paras.length * 100;
+  $('#scrubFill').style.width = pct + '%'; $('#scrubKnob').style.left = pct + '%';
+  $('#scrubLeft').textContent = `¶ ${pos.para + 1} / ${paras.length}`;
+  const charsLeft = paras.slice(pos.para).reduce((a, p) => a + p.length, 0) - (paras[pos.para].length * frac);
+  $('#scrubRight').textContent = fmtMin(charsLeft / CHARS_PER_SEC / S.settings.speed) + ' left';
+}
+const scrubBar = $('#scrubBar');
+function scrubTarget(e) { const r = scrubBar.getBoundingClientRect(); const n = book.chapters[pos.ch].paras.length; return clamp(Math.floor((e.clientX - r.left) / r.width * n), 0, n - 1); }
+scrubBar.addEventListener('mousemove', e => { if (!book) return; const i = scrubTarget(e); const tip = $('#scrubTip');
+  tip.textContent = `¶ ${i + 1}: ${book.chapters[pos.ch].paras[i].slice(0, 40)}…`; tip.style.left = (e.clientX - scrubBar.getBoundingClientRect().left) + 'px'; });
+scrubBar.addEventListener('click', e => { if (!book) return; following = true; follow(true); playAt(pos.ch, scrubTarget(e), 0, playing); });
+
+// ------------------------------------------------------------------ speed, voice, volume, sleep
+const SPEEDS = [0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+function setSpeed(v) {
+  S.settings.speed = Math.round(clamp(v, 0.5, 3) * 100) / 100;
+  audio.defaultPlaybackRate = audio.playbackRate = S.settings.speed;
+  saveSettings(); updatePlayer(); renderSpeedChips(); toast(`Speed ${S.settings.speed}×`);
+}
+function renderSpeedChips() {
+  $('#speedChips').innerHTML = SPEEDS.map(s => `<button class="chip ${Math.abs(s - S.settings.speed) < .001 ? 'sel' : ''}" onclick="setSpeed(${s})">${s}×</button>`).join('');
+}
+
+const previewAudio = new Audio();
+function renderVoices() {
+  let html = '';
+  for (const [group, names] of Object.entries(S.voices)) {
+    html += `<h4>${group}</h4>` + names.split(' ').map(v => `<div class="pop-item ${v === S.settings.voice ? 'sel' : ''}" onclick="setVoice('${v}')">
+      <span class="grow">${voiceLabel(v)}</span>${v === 'af_heart' || v === 'bm_george' ? '<span class="hint">favorite</span>' : ''}
+      <button class="mini" title="Hear a sample" onclick="event.stopPropagation(); previewVoice('${v}')">${ic('play')}</button></div>`).join('');
+  }
+  $('#voicePop').innerHTML = html;
+}
+function previewVoice(v) {
+  if (playing) pauseNow();
+  previewAudio.src = `/api/say?voice=${v}&text=${encodeURIComponent(`Hi, I'm ${voiceLabel(v)}. I'd be happy to read this book to you.`)}`;
+  previewAudio.volume = Math.min(1, S.settings.volume); previewAudio.play();
+}
+function setVoice(v) {
+  S.settings.voice = v; saveSettings(); renderVoices(); toast(`Voice: ${voiceLabel(v)}`);
+  if (playing) playAt(pos.ch, pos.para, Math.max(0, audio.currentTime - 1)); else loadedKey = null;
+}
+
+function setVolume(v) {
+  S.settings.volume = clamp(v, 0, 1.6); muted = false; audio.muted = false;
+  applyGain(); $('#vol').title = 'Volume ' + Math.round(S.settings.volume * 100) + '%'; $('#vol').value = S.settings.volume; saveSettings(); paintVol();
+}
+function toggleMute() { muted = !muted; audio.muted = muted; paintVol(); }
+function paintVol() { $('#volIcon').innerHTML = ic(muted || S.settings.volume === 0 ? 'mute' : 'volume'); }
+$('#vol').oninput = e => setVolume(+e.target.value);
+
+const SLEEPS = [[null, 'Off'], [5, '5 minutes'], [15, '15 minutes'], [30, '30 minutes'], [45, '45 minutes'], [60, '1 hour'], ['chapter', 'End of this chapter']];
+function renderSleep() {
+  $('#sleepItems').innerHTML = SLEEPS.map(([v, label]) => `<button class="pop-item ${sleep.mode === v ? 'sel' : ''}" onclick="setSleep(${JSON.stringify(v)})"><span class="grow">${label}</span>${sleep.mode === v ? ic('check') : ''}</button>`).join('');
+  const btn = $('#sleepBtn'); btn.classList.toggle('on', !!sleep.mode);
+  btn.innerHTML = ic('moon') + (typeof sleep.mode === 'number' ? `<span class="badge">${Math.max(1, Math.ceil((sleep.until - Date.now()) / 60000))}</span>` : sleep.mode === 'chapter' ? '<span class="badge">ch</span>' : '');
+}
+function setSleep(v) { sleep = { mode: v, until: typeof v === 'number' ? Date.now() + v * 60000 : 0 }; renderSleep(); closePops(); toast(v ? `Sleep timer: ${SLEEPS.find(s => s[0] === v)[1]}` : 'Sleep timer off'); }
+function clearSleep() { sleep = { mode: null, until: 0 }; renderSleep(); }
+function checkSleep() {
+  if (typeof sleep.mode !== 'number') return;
+  const left = sleep.until - Date.now();
+  if (left <= 0) { clearSleep(); gainScale = 1; applyGain(); pauseNow(); toast('Sleep timer: goodnight 🌙'); }
+  else if (left < 10000) { gainScale = left / 10000; applyGain(); }   // fade out over the last 10 s
+}
+setInterval(() => { if (typeof sleep.mode === 'number') renderSleep(); }, 30000);
+
+// ------------------------------------------------------------------ bookmarks
+function updateBookmarkBtn() {
+  if (!book) return;
+  const on = (book.bookmarks || []).some(b => b.ch === pos.ch && b.para === pos.para);
+  $('#bmBtn').innerHTML = ic(on ? 'bookmarkOn' : 'bookmark'); $('#bmBtn').classList.toggle('on', on);
+}
+function toggleBookmark() {
+  if (!book) return;
+  book.bookmarks = book.bookmarks || [];
+  const i = book.bookmarks.findIndex(b => b.ch === pos.ch && b.para === pos.para);
+  if (i >= 0) { book.bookmarks.splice(i, 1); toast('Bookmark removed'); }
+  else { book.bookmarks.push({ ch: pos.ch, para: pos.para, snippet: book.chapters[pos.ch].paras[pos.para].slice(0, 90), at: Date.now() });
+    book.bookmarks.sort((a, b) => a.ch - b.ch || a.para - b.para); toast('Bookmarked'); }
+  post('/api/progress', { book: book.id, bookmarks: book.bookmarks });
+  const el = document.querySelector(`#readerInner .para[data-i="${pos.para}"]`); if (el) el.classList.toggle('bookmarked', i < 0);
+  updateBookmarkBtn(); if (sideTab === 'bookmarks') renderSide();
+}
+function removeBookmark(i) { book.bookmarks.splice(i, 1); post('/api/progress', { book: book.id, bookmarks: book.bookmarks }); renderSide(); renderChapter(); }
+
+// ------------------------------------------------------------------ popovers & modals
+document.addEventListener('click', e => {
+  const trigger = e.target.closest('[data-pop]');
+  if (trigger) {
+    const pop = document.getElementById(trigger.dataset.pop), wasOpen = pop.classList.contains('show');
+    closePops(); if (wasOpen) return;
+    if (pop.id === 'voicePop') renderVoices(); if (pop.id === 'speedPop') renderSpeedChips(); if (pop.id === 'sleepPop') renderSleep();
+    pop.classList.add('show');
+    const r = trigger.getBoundingClientRect(), pr = pop.getBoundingClientRect();
+    pop.style.left = clamp(r.left + r.width / 2 - pr.width / 2, 10, innerWidth - pr.width - 10) + 'px';
+    pop.style.top = Math.max(10, r.top - pr.height - 10) + 'px';
+    if (pop.id === 'voicePop') { const sel = pop.querySelector('.sel'); if (sel) sel.scrollIntoView({ block: 'center' }); }
+    return;
+  }
+  if (!e.target.closest('.pop')) closePops();
+  if (e.target.classList.contains('scrim')) closeModals();
+});
+function closePops() { document.querySelectorAll('.pop.show').forEach(p => p.classList.remove('show')); }
+function openModal(id) { closePops(); $('#' + id).classList.add('show'); }
+function closeModals() { document.querySelectorAll('.scrim.show').forEach(m => m.classList.remove('show')); }
+
+// ------------------------------------------------------------------ export
+let exFormat = 'm4b', exPoll;
+document.querySelectorAll('#fmtSeg button').forEach(b => b.onclick = () => { exFormat = b.dataset.v; document.querySelectorAll('#fmtSeg button').forEach(x => x.classList.toggle('sel', x === b)); });
+async function openExport() {
+  $('#exVoice').innerHTML = Object.entries(S.voices).map(([g, names]) => `<optgroup label="${g}">` + names.split(' ').map(v => `<option value="${v}" ${v === S.settings.voice ? 'selected' : ''}>${voiceLabel(v)}</option>`).join('') + '</optgroup>').join('');
+  const total = book.chapters.reduce((a, c) => a + c.paras.reduce((x, p) => x + p.length, 0), 0);
+  $('#exportSub').textContent = `“${book.title}” is about ${fmtMin(total / CHARS_PER_SEC)} of audio. You can keep listening while it’s made.`;
+  openModal('exportModal');
+  const st = await api('/api/export');
+  if (st.running || (st.book === book.id && (st.result || st.error))) showExportRun(st); else showExportForm();
+}
+function showExportForm() {
+  $('#exportForm').hidden = false; $('#exportRun').hidden = true;
+  $('#exportActions').innerHTML = `<button class="btn" onclick="closeModals()">Cancel</button><button class="btn primary" onclick="startExport()">${ic('download')}Create</button>`;
+}
+async function startExport() {
+  try { await post('/api/export', { book: book.id, format: exFormat, voice: $('#exVoice').value, speed: +$('#exSpeed').value, chapters: $('#exChapters').value.trim() }); }
+  catch (e) { toast('Another export is still running'); }
+  pollExport();
+}
+function showExportRun(st) {
+  $('#exportForm').hidden = true; $('#exportRun').hidden = false;
+  const pct = st.total ? st.done / st.total * 100 : 0;
+  $('#exFill').style.width = pct + '%';
+  if (st.error) { $('#exStatus').textContent = 'Something went wrong: ' + st.error.slice(0, 200);
+    $('#exportActions').innerHTML = `<button class="btn" onclick="showExportForm()">Try again</button><button class="btn primary" onclick="closeModals()">Close</button>`; }
+  else if (st.result) { $('#exFill').style.width = '100%'; $('#exStatus').innerHTML = `Done! Saved to <b>${esc(st.result)}</b>`;
+    $('#exportActions').innerHTML = `<button class="btn" onclick="showExportForm()">Make another</button><button class="btn primary" onclick="reveal(${esc(JSON.stringify(st.result))})">${ic('folder')}Show file</button>`; }
+  else {
+    const el = (Date.now() / 1000 - st.started), eta = st.done ? el / st.done * (st.total - st.done) : NaN;
+    $('#exStatus').textContent = `Chapter ${Math.min(st.done + 1, st.total || 1)} of ${st.total || '…'}: ${st.chapter}${isFinite(eta) ? ' · about ' + fmtMin(eta) + ' left' : ''}`;
+    $('#exportActions').innerHTML = `<button class="btn" onclick="closeModals()">Hide (keeps running)</button>`;
+  }
+}
+async function pollExport() {
+  clearTimeout(exPoll);
+  const st = await api('/api/export');
+  if ($('#exportModal').classList.contains('show')) showExportRun(st);
+  if (st.running) exPoll = setTimeout(pollExport, 1500);
+  else if (st.result) toast('Audiobook file is ready');
+}
+function reveal(path) { post('/api/reveal', { path }); }
+
+// ------------------------------------------------------------------ theme & text size
+function applyTheme() {
+  document.documentElement.dataset.theme = S.settings.theme;
+  const icon = ic(S.settings.theme === 'dark' ? 'sun' : 'moon');
+  $('#themeBtn').innerHTML = icon; $('#themeBtn2').innerHTML = icon;
+}
+$('#themeBtn').onclick = $('#themeBtn2').onclick = () => { S.settings.theme = S.settings.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveSettings(); };
+function setFont() { document.documentElement.style.setProperty('--reader-size', S.settings.fontSize + 'px'); }
+function fontSize(d) { S.settings.fontSize = clamp(S.settings.fontSize + d * 2, 14, 32); setFont(); saveSettings(); scrollToCurrent(false); }
+
+// ------------------------------------------------------------------ engine status
+function updateEngine(state, err) {
+  const pill = $('#enginePill');
+  pill.hidden = state === 'ready';
+  pill.textContent = state === 'error' ? 'Voice engine error: ' + (err || '') : 'Warming up the voice…';
+  if (state === 'loading') setTimeout(async () => { const s = await api('/api/state'); updateEngine(s.engine, s.engineError); }, 1500);
+}
+
+// ------------------------------------------------------------------ keyboard
+addEventListener('keydown', e => {
+  if (e.target.matches('input, select, textarea')) return;
+  if (e.key === 'Escape') { if (document.querySelector('.scrim.show, .pop.show')) { closeModals(); closePops(); } else if (book) showLibrary(); return; }
+  if (e.key === '?') { openModal('keysModal'); return; }
+  if (!book) return;
+  const k = e.key;
+  if (k === ' ') { e.preventDefault(); togglePlay(); }
+  else if (k === 'ArrowLeft' && e.shiftKey) { e.preventDefault(); prevChapter(); }
+  else if (k === 'ArrowRight' && e.shiftKey) { e.preventDefault(); nextChapter(); }
+  else if (k === 'ArrowLeft') { e.preventDefault(); seekBy(-15); }
+  else if (k === 'ArrowRight') { e.preventDefault(); seekBy(15); }
+  else if (k === 'ArrowUp') { e.preventDefault(); stepPara(-1); }
+  else if (k === 'ArrowDown') { e.preventDefault(); stepPara(1); }
+  else if (k === '[') setSpeed(S.settings.speed - 0.1);
+  else if (k === ']') setSpeed(S.settings.speed + 0.1);
+  else if (k === 'b' || k === 'B') toggleBookmark();
+  else if (k === 'c' || k === 'C') follow(true);
+  else if (k === 'm' || k === 'M') toggleMute();
+});
+// media keys on the keyboard / headset
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.setActionHandler('play', togglePlay);
+  navigator.mediaSession.setActionHandler('pause', togglePlay);
+  navigator.mediaSession.setActionHandler('previoustrack', () => stepPara(-1));
+  navigator.mediaSession.setActionHandler('nexttrack', () => stepPara(1));
+  navigator.mediaSession.setActionHandler('seekbackward', () => seekBy(-15));
+  navigator.mediaSession.setActionHandler('seekforward', () => seekBy(15));
+}
+addEventListener('beforeunload', () => { if (book) { const t = audio.currentTime || resumeT;
+  navigator.sendBeacon('/api/progress', new Blob([JSON.stringify({ book: book.id, ch: pos.ch, para: pos.para, t })], { type: 'application/json' })); } });
+
+// ------------------------------------------------------------------ start
+(async function init() {
+  paintIcons();
+  await refresh();
+  applyGain(); $('#vol').value = S.settings.volume; $('#vol').title = 'Volume ' + Math.round(S.settings.volume * 100) + '%'; paintVol();
+  renderLibrary(); renderSleep();
+  const m = location.hash.match(/book=(\w+)/); if (m) openBook(m[1]);
+})();
+</script>
+</body>
+</html>

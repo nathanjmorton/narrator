@@ -1,0 +1,9 @@
+.venv/
+models/
+books/
+output/
+.cache/
+__pycache__/
+state.json
+state.tmp
+*.lnk

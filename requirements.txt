@@ -1,0 +1,13 @@
+kokoro==0.9.4
+misaki[en]==0.9.4
+soundfile>=0.12
+numpy>=1.26
+EbookLib==0.20
+beautifulsoup4>=4.12
+lxml>=5.0
+pymupdf>=1.24
+imageio-ffmpeg>=0.5
+python-docx>=1.1
+sounddevice>=0.4.6
+Flask>=3.0
+pywebview>=5.0
